@@ -24,7 +24,7 @@ import 'package:Medito/widgets/home/small_shortcuts_row_widget.dart';
 import 'package:Medito/widgets/home/stats_widget.dart';
 import 'package:Medito/widgets/packs/announcement_banner_widget.dart';
 import 'package:Medito/widgets/packs/error_widget.dart';
-import 'package:connectivity/connectivity.dart';
+import 'package:data_connection_checker/data_connection_checker.dart';
 import 'package:flutter/material.dart';
 import 'package:package_info/package_info.dart';
 
@@ -60,10 +60,16 @@ class HomeWidget extends StatelessWidget {
                     children: [
                       _getAppBar(context),
                       AnnouncementBanner(key: _announceKey),
-                      SmallShortcutsRowWidget(key: _shortcutKey),
-                      CoursesRowWidget(key: _coursesKey),
-                      DailyMessageWidget(key: _dailyMessageKey),
+                      SmallShortcutsRowWidget(
+                        key: _shortcutKey,
+                        onTap: (type, id) => _navigate(type, id, context),
+                      ),
+                      CoursesRowWidget(
+                          key: _coursesKey,
+                          onTap: (type, id) => _navigate(type, id, context)),
                       StatsWidget(),
+                      DailyMessageWidget(key: _dailyMessageKey),
+                      Container(height: 16)
                     ],
                   );
                 }
@@ -73,12 +79,19 @@ class HomeWidget extends StatelessWidget {
     );
   }
 
+  Future<void> _navigate(type, id, BuildContext context) {
+    return NavigationFactory.navigateToScreenFromString(type, id, context)
+        .then((value) {
+      return _refresh();
+    });
+  }
+
   Future<void> _refresh() {
+    _bloc.checkConnection();
     _announceKey.currentState?.refresh();
     _shortcutKey.currentState?.refresh();
     _coursesKey.currentState?.refresh();
     _dailyMessageKey.currentState?.refresh();
-    _bloc.checkConnection();
     return _bloc.fetchMenu(skipCache: true);
   }
 
@@ -165,9 +178,7 @@ class HomeWidget extends StatelessWidget {
   }
 
   void _observeNetwork() {
-    Connectivity()
-        .onConnectivityChanged
-        .listen((ConnectivityResult result) async {
+    DataConnectionChecker().onStatusChange.listen((status) async {
       await _refresh();
     });
   }
